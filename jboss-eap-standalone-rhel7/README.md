@@ -1,3 +1,14 @@
+<link rel="stylesheet" type="text/css" media="all" href="markdown_styles.css" />
+
+
+
+![Kitten](images/app_one.png# thumbnail bordered)
+img[src~="thumbnail"] { width:150px; height:100px; } img[src~="bordered"] { border: 1px solid black; }
+
+![Kitten](images/app_one.png){: width=150 height=100 style="float:right; padding:16px"}
+
+![Kitten](images/app_ones.png)
+
 # JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FSpektraSystems%2Fredhat-mw-cloud-quickstart%2Fmaster%2Fjboss-eap-standalone-rhel7%2Fazuredeploy.json" target="_blank">
     <img src="https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.png"/>
@@ -159,7 +170,8 @@ The deployment takes approximately 10 minutes to complete.
 
   ![alt text](images/app.png)
   
-  <img src="images/app_one.png" width="610"/><img src="images/app_schedule_workshop.png" width="610"/>
+  
+  <img src="images/app_one.png"><img src="images/app_schedule_workshop.png">
 
 - Paste the Admin Console URL that you copied from the output page in a browser to access the JBoss EAP Admin Console and enter the JBoss EAP Username and password to login.
 
