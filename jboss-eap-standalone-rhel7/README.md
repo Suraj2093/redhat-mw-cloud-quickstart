@@ -158,6 +158,8 @@ The deployment takes approximately 10 minutes to complete.
 - Paste the App URL that you copied from the output page in a browser to view the JBoss-EAP on Azure web page.
 
   ![alt text](images/app.png)
+  
+  <img src="images/app_one.png" width="610"/><img src="images/app_schedule_workshop.png" width="610"/>
 
 - Paste the Admin Console URL that you copied from the output page in a browser to access the JBoss EAP Admin Console and enter the JBoss EAP Username and password to login.
 
