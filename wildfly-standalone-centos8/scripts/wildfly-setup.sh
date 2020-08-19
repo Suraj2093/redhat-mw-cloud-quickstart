@@ -29,7 +29,7 @@ done
 fileUrl="$artifactsLocation/$pathToFile/$fileToDownload$token"
 
 WILDFLY_USER=$9
-WILDFLY_PASSWORD=$10
+WILDFLY_PASSWORD=${10}
 IP_ADDR=$(hostname -I)
 
 echo "WILDFLY_USER: " ${WILDFLY_USER} | adddate >> wildfly.install.log
