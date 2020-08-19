@@ -33,6 +33,7 @@ WILDFLY_PASSWORD=$3
 IP_ADDR=$(hostname -I)
 
 echo "WILDFLY_USER: " ${WILDFLY_USER} | adddate >> wildfly.install.log
+echo "WILDFLY_Password: " ${WILDFLY_PASSWORD} | adddate >> wildfly.install.log
 echo "File URI : " $fileUrl | adddate >> wildfly.install.log
 
 echo "WILDFLY Downloading..." | adddate >> wildfly.install.log
