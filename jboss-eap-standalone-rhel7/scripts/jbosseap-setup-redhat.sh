@@ -26,7 +26,7 @@ while getopts "a:t:p:f:" opt; do
     esac
 done
 
-fileUrl="$artifactsLocation/$pathToFile/$fileToDownload$token"
+fileUrl="$artifactsLocation$pathToFile/$fileToDownload$token"
 
 echo 'export EAP_HOME="/opt/rh/eap7/root/usr/share/wildfly"' >> ~/.bash_profile
 source ~/.bash_profile
