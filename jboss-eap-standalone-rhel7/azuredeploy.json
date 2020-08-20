@@ -8,22 +8,22 @@
         "description": "Linux VM user account name"
       }
     },
-    "authenticationType": {	
-      "type": "string",	
-      "defaultValue": "password",	
-      "allowedValues": [	
-        "password",		
-        "sshPublicKey"	
-      ],	
-      "metadata": {	
-        "description": "Type of authentication to use on the Virtual Machine"	
-      }	
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "password",
+      "allowedValues": [
+        "password",
+        "sshPublicKey"
+      ],
+      "metadata": {
+        "description": "Type of authentication to use on the Virtual Machine"
+      }
     },
-    "adminPasswordOrSSHKey": {	
-      "type": "securestring",	
-      "metadata": {	
-        "description": "Password or SSH key for the Virtual Machine"	
-      }	
+    "adminPasswordOrSSHKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password or SSH key for the Virtual Machine"
+      }
     },
     "jbossEAPUserName": {
       "type": "string",
@@ -37,16 +37,16 @@
         "description": "Password for JBoss EAP Manager"
       }
     },
-    "rhelOSLicenseType": {	
-      "type": "string",	
-      "defaultValue": "PAYG",	
-      "allowedValues": [	
-        "PAYG",		
+    "rhelOSLicenseType": {
+      "type": "string",
+      "defaultValue": "PAYG",
+      "allowedValues": [
+        "PAYG",
         "BYOS"
-      ],	
-      "metadata": {	
+      ],
+      "metadata": {
         "description": "Select the of RHEL OS License Type for deploying your Virtual Machine. Please read through the guide and make sure you follow the steps mentioned under section 'Licenses, Subscriptions and Costs' if you are selecting BYOS"
-      }	
+      }
     },
     "rhsmUserName": {
       "type": "string",
@@ -78,7 +78,7 @@
       "metadata": {
         "description": "The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated"
       },
-      "defaultValue": "https://raw.githubusercontent.com/SpektraSystems/redhat-mw-cloud-quickstart/master/jboss-eap-standalone-rhel7/"
+      "defaultValue": "[deployment().properties.templateLink.uri]"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
@@ -120,7 +120,7 @@
     "imageSkuPAYG": "7.7",
     "imageOfferBYOS": "rhel-byos",
     "imageSkuBYOS": "rhel-lvm77",
-    "nicName": "[concat(uniquestring(resourceGroup().id), '-nic')]",
+    "nicName": "jbosseap-server-nic",
     "addressPrefix": "10.0.0.0/16",
     "subnetName": "jbosseap-server-subnet",
     "subnetPrefix": "10.0.0.0/24",
@@ -133,25 +133,27 @@
     "networkSecurityGroupName": "jbosseap-nsg",
     "scriptFolder": "scripts",
     "scriptFileName": "jbosseap-setup-redhat.sh",
+    "fileToBeDownloaded": "JBoss-EAP_on_Azure.war",
     "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
     "bootStorageAccountName": "[concat('bootstrg', uniqueString(resourceGroup().id))]",
     "storageAccountType": "Standard_LRS",
-    "linuxConfiguration": {	
-      "disablePasswordAuthentication": true,	
-      "ssh": {	
-        "publicKeys": [	
-          {	
-            "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",	
-            "keyData": "[parameters('adminPasswordOrSSHKey')]"	
-          }	
-        ]	
-      }	
-    }
+    "linuxConfiguration": {
+      "disablePasswordAuthentication": true,
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+            "keyData": "[parameters('adminPasswordOrSSHKey')]"
+          }
+        ]
+      }
+    },
+    "scriptArgs": "[concat('-a ', uri(parameters('_artifactsLocation'), '.'), ' -t \"', parameters('_artifactsLocationSasToken'), '\" -p ', variables('scriptFolder'), ' -f ', variables('fileToBeDownloaded'))]"
   },
   "resources": [
     {
       "apiVersion": "2019-05-01",
-      "name": "pid-2c0c0514-a608-492e-b64e-bc4ace59035b",
+      "name": "pid-9a72dd7b-3568-469b-a84f-d953207f2a1a",
       "type": "Microsoft.Resources/deployments",
       "properties": {
         "mode": "Incremental",
@@ -379,8 +381,10 @@
         "settings": {
           "fileUris": [
             "[concat(parameters('_artifactsLocation'), variables('scriptFolder'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]"
-          ],
-          "commandToExecute": "[concat('sh jbosseap-setup-redhat.sh',' ',parameters('jbossEAPUserName'),' ',variables('singlequote'),parameters('jbossEAPPassword'),variables('singlequote'),' ',parameters('rhsmUserName'),' ',variables('singlequote'),parameters('rhsmPassword'),variables('singlequote'),' ',parameters('rhelOSLicenseType'),' ', parameters('rhsmPoolEAP'))]"
+          ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[concat('sh jbosseap-setup-redhat.sh',' ',variables('scriptArgs'),' ',parameters('jbossEAPUserName'),' ',variables('singlequote'),parameters('jbossEAPPassword'),variables('singlequote'),' ',parameters('rhsmUserName'),' ',variables('singlequote'),parameters('rhsmPassword'),variables('singlequote'),' ',parameters('rhelOSLicenseType'),' ', parameters('rhsmPoolEAP'))]"
         }
       }
     },
@@ -460,8 +464,10 @@
         "settings": {
           "fileUris": [
             "[concat(parameters('_artifactsLocation'), variables('scriptFolder'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]"
-          ],
-          "commandToExecute": "[concat('sh jbosseap-setup-redhat.sh',' ',parameters('jbossEAPUserName'),' ',variables('singlequote'),parameters('jbossEAPPassword'),variables('singlequote'),' ',parameters('rhsmUserName'),' ',variables('singlequote'),parameters('rhsmPassword'),variables('singlequote'),' ',parameters('rhelOSLicenseType'),' ', parameters('rhsmPoolEAP'),' ', parameters('rhsmPoolRHEL'))]"
+          ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[concat('sh jbosseap-setup-redhat.sh',' ',variables('scriptArgs'),' ',parameters('jbossEAPUserName'),' ',variables('singlequote'),parameters('jbossEAPPassword'),variables('singlequote'),' ',parameters('rhsmUserName'),' ',variables('singlequote'),parameters('rhsmPassword'),variables('singlequote'),' ',parameters('rhelOSLicenseType'),' ', parameters('rhsmPoolEAP'),' ', parameters('rhsmPoolRHEL'))]"
         }
       }
     }
