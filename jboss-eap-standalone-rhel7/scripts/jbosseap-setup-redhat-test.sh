@@ -56,6 +56,12 @@ flag=$?; if [ $flag != 0 ] ; then echo  "ERROR! Red Hat Subscription Manager Reg
 echo "subscription-manager attach --pool=EAP_POOL" | adddate  >> jbosseap.install.log
 subscription-manager attach --pool=${RHSM_POOL} >> jbosseap.install.log 2>&1
 flag=$?; if [ $flag != 0 ] ; then echo  "ERROR! Pool Attach for Red Hat Middleware Failed" | adddate  >> jbosseap.install.log; exit $flag;  fi
+if [ $RHEL_OS_LICENSE_TYPE == "BYOS" ]
+then
+    echo "Attaching Pool ID for RHEL OS" | adddate  >> jbosseap.install.log
+    echo "subscription-manager attach --pool=RHEL_POOL" | adddate >> jbosseap.install.log
+    subscription-manager attach --pool=${15} >> jbosseap.install.log 2>&1
+fi
 echo "Subscribing the system to get access to JBoss EAP 7.2 repos" | adddate >> jbosseap.install.log
 
 # Install JBoss EAP 7.2
