@@ -33,7 +33,6 @@
     },
     "jbossEAPPassword": {
       "type": "securestring",
-      "minLength": 12,
       "metadata": {
         "description": "Password for JBoss EAP Manager"
       }
@@ -79,7 +78,7 @@
       "metadata": {
         "description": "The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated"
       },
-      "defaultValue": "https://raw.githubusercontent.com/SpektraSystems/redhat-mw-cloud-quickstart/master/jboss-eap72-standalone-rhel7/"
+      "defaultValue": "[deployment().properties.templateLink.uri]"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
@@ -125,9 +124,15 @@
     "addressPrefix": "10.0.0.0/16",
     "subnetName": "jbosseap-server-subnet",
     "subnetPrefix": "10.0.0.0/24",
+    "publicIPAddressName": "jbosseap-server-pip",
+    "publicIPAddressType": "Dynamic",
+    "publicIPAddressDNSName" : "[concat('jbosseap-server-pip-', uniqueString(resourceGroup().id))]",
     "vmNamePAYG": "jbosseap-payg-server",
     "vmNameBYOS": "jbosseap-byos-server",
     "virtualNetworkName": "jbosseap-vnet",
+    "networkSecurityGroupName": "jbosseap-nsg",
+    "scriptFolder": "scripts",
+    "fileToBeDownloaded": "JBoss-EAP_on_Azure.war",
     "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
     "bootStorageAccountName": "[concat('bootstrg', uniqueString(resourceGroup().id))]",
     "storageAccountType": "Standard_LRS",
@@ -141,13 +146,14 @@
           }
         ]
       }
-    }
+    },
+    "scriptArgs": "[concat('-a ', uri(parameters('_artifactsLocation'), '.'), ' -t \"', parameters('_artifactsLocationSasToken'), '\" -p ', variables('scriptFolder'), ' -f ', variables('fileToBeDownloaded'))]"
   },
   "resources": [
     {
-      "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-05-01",
-      "name": "pid-2c0c0514-a608-492e-b64e-bc4ace59035b",
+      "name": "pid-9a72dd7b-3568-469b-a84f-d953207f2a1a",
+      "type": "Microsoft.Resources/deployments",
       "properties": {
         "mode": "Incremental",
         "template": {
@@ -159,22 +165,95 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2019-06-01",
       "name": "[variables('bootStorageAccountName')]",
+      "apiVersion": "2019-06-01",
       "location": "[parameters('location')]",
+      "tags": {
+                "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
+            },
       "sku": {
           "name": "[variables('storageAccountType')]"
       },
-      "kind": "Storage",
+      "kind": "Storage"
+    },
+    {
+      "apiVersion": "2019-11-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[parameters('location')]",
       "tags": {
                 "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
+            },
+      "properties": {
+        "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('publicIPAddressDNSName')]"
+        }
       }
     },
     {
-      "type": "Microsoft.Network/virtualNetworks",
       "apiVersion": "2019-11-01",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+                "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
+            },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "default-allow-ssh",
+            "properties": {
+              "description": "Allow SSH",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "default-allow-eap-admin",
+            "properties": {
+              "description": "Allow EAP/ADMIN",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9990",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1020,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "default-allow-eap",
+            "properties": {
+              "description": "Allow WEB/EAP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "8080",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1010,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2019-11-01",
+      "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
       "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+      ],
       "tags": {
                 "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
             },
@@ -188,29 +267,40 @@
           {
             "name": "[variables('subnetName')]",
             "properties": {
-              "addressPrefix": "[variables('subnetPrefix')]"
+              "addressPrefix": "[variables('subnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              }
             }
           }
         ]
       }
     },
     {
-      "type": "Microsoft.Network/networkInterfaces",
       "apiVersion": "2019-11-01",
+      "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('nicName')]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[variables('virtualNetworkName')]"
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
       ],
       "tags": {
                 "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
             },
       "properties": {
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+        },
         "ipConfigurations": [
           {
             "name": "ipconfig1",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+              },
               "subnet": {
                 "id": "[variables('subnetRef')]"
               }
@@ -221,13 +311,13 @@
     },
     {
       "condition": "[equals(parameters('rhelOSLicenseType'),'PAYG')]",
+      "apiVersion":  "2019-12-01", 
       "type": "Microsoft.Compute/virtualMachines",
-      "apiVersion":  "2019-12-01",
       "name": "[variables('vmNamePAYG')]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[variables('nicName')]",
-        "[variables('bootStorageAccountName')]"
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('bootStorageAccountName'))]"
       ],
       "tags": {
                 "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
@@ -265,7 +355,7 @@
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": true,
-            "storageUri": "[reference(variables('bootStorageAccountName'), '2019-06-01').primaryEndpoints['blob']]"
+            "storageUri": "[concat('https://', variables('bootStorageAccountName'), '.blob.core.windows.net')]"
           }
         }
       }
@@ -273,11 +363,11 @@
     {
       "condition": "[equals(parameters('rhelOSLicenseType'),'PAYG')]",
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "apiVersion": "2019-12-01",
       "name": "[concat(variables('vmNamePAYG'),'/jbosseap-setup-extension')]",
+      "apiVersion": "2019-12-01",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[variables('vmNamePAYG')]"
+        "[concat('Microsoft.Compute/virtualMachines/', variables('vmNamePAYG'))]"
       ],
       "tags": {
                 "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
@@ -293,28 +383,28 @@
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('sh jbosseap-setup-redhat.sh',' ',parameters('jbossEAPUserName'),' ',variables('singlequote'),parameters('jbossEAPPassword'),variables('singlequote'),' ',parameters('rhsmUserName'),' ',variables('singlequote'),parameters('rhsmPassword'),variables('singlequote'),' ',parameters('rhelOSLicenseType'),' ', parameters('rhsmPoolEAP'))]"
+          "commandToExecute": "[concat('sh jbosseap-setup-redhat.sh',' ',variables('scriptArgs'),' ',parameters('jbossEAPUserName'),' ',variables('singlequote'),parameters('jbossEAPPassword'),variables('singlequote'),' ',parameters('rhsmUserName'),' ',variables('singlequote'),parameters('rhsmPassword'),variables('singlequote'),' ',parameters('rhelOSLicenseType'),' ', parameters('rhsmPoolEAP'))]"
         }
       }
     },
     {
       "condition": "[equals(parameters('rhelOSLicenseType'),'BYOS')]",
-      "type": "Microsoft.Compute/virtualMachines",
       "apiVersion":  "2019-12-01",
+      "type": "Microsoft.Compute/virtualMachines",
       "name": "[variables('vmNameBYOS')]",
       "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('bootStorageAccountName'))]"
+      ],
+      "tags": {
+                "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
+            },
       "plan": {
         "name": "rhel-lvm77",
         "publisher": "redhat",
         "product": "rhel-byos"
       },
-      "dependsOn": [
-        "[variables('nicName')]",
-        "[variables('bootStorageAccountName')]"
-      ],
-      "tags": {
-                "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
-            },
       "properties": {
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
@@ -348,7 +438,7 @@
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": true,
-            "storageUri": "[reference(variables('bootStorageAccountName'), '2019-06-01').primaryEndpoints['blob']]"
+            "storageUri": "[concat('https://', variables('bootStorageAccountName'), '.blob.core.windows.net')]"
           }
         }
       }
@@ -356,11 +446,11 @@
     {
       "condition": "[equals(parameters('rhelOSLicenseType'),'BYOS')]",
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "apiVersion": "2019-12-01",
       "name": "[concat(variables('vmNameBYOS'),'/jbosseap-setup-extension')]",
+      "apiVersion": "2019-12-01",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[variables('vmNameBYOS')]"
+        "[concat('Microsoft.Compute/virtualMachines/', variables('vmNameBYOS'))]"
       ],
       "tags": {
                 "QuickstartName": "JBoss EAP 7.2 on RHEL 7.7 (stand-alone VM)"
@@ -376,23 +466,23 @@
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('sh jbosseap-setup-redhat.sh',' ',parameters('jbossEAPUserName'),' ',variables('singlequote'),parameters('jbossEAPPassword'),variables('singlequote'),' ',parameters('rhsmUserName'),' ',variables('singlequote'),parameters('rhsmPassword'),variables('singlequote'),' ',parameters('rhelOSLicenseType'),' ', parameters('rhsmPoolEAP'),' ', parameters('rhsmPoolRHEL'))]"
+          "commandToExecute": "[concat('sh jbosseap-setup-redhat.sh',' ',variables('scriptArgs'),' ',parameters('jbossEAPUserName'),' ',variables('singlequote'),parameters('jbossEAPPassword'),variables('singlequote'),' ',parameters('rhsmUserName'),' ',variables('singlequote'),parameters('rhsmPassword'),variables('singlequote'),' ',parameters('rhelOSLicenseType'),' ', parameters('rhsmPoolEAP'),' ', parameters('rhsmPoolRHEL'))]"
         }
       }
     }
   ],
   "outputs": {
-    "vm Private IP Address": {
-        "type": "string",
-        "value": "[reference(variables('nicName')).ipConfigurations[0].properties.privateIPAddress]"
+    "vm DNS Name": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))).dnsSettings.fqdn]"
     },
     "appURL": {
       "type": "string",
-      "value": "[concat('http://', reference(variables('nicName')).ipConfigurations[0].properties.privateIPAddress, ':8080/JBoss-EAP_on_Azure/')]"
+      "value": "[concat('http://', reference(variables('publicIPAddressName')).dnsSettings.fqdn, ':8080/JBoss-EAP_on_Azure/')]"
     },
     "adminConsole": {
       "type": "string",
-      "value": "[concat('http://', reference(variables('nicName')).ipConfigurations[0].properties.privateIPAddress, ':9990')]"
+      "value": "[concat('http://', reference(variables('publicIPAddressName')).dnsSettings.fqdn, ':9990')]"
     }
   }
 }
