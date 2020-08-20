@@ -26,7 +26,7 @@ while getopts "a:t:p:f:" opt; do
     esac
 done
 
-fileUrl="$artifactsLocation/$pathToFile/$fileToDownload$token"
+fileUrl="$artifactsLocation$pathToFile/$fileToDownload$token"
 
 WILDFLY_USER=$9
 WILDFLY_PASSWORD=${10}
@@ -47,6 +47,11 @@ wget https://download.jboss.org/wildfly/$WILDFLY_RELEASE.Final/wildfly-$WILDFLY_
 flag=$?; if [ $flag != 0 ] ; then echo  "ERROR! Downloading WildFly Failed" | adddate >> wildfly.install.log; exit $flag;  fi
 echo "tar xvf wildfly-$WILDFLY_RELEASE.Final.tar.gz" | adddate >> wildfly.install.log
 tar xvf wildfly-$WILDFLY_RELEASE.Final.tar.gz | adddate >> wildfly.install.log 2>&1
+
+echo "echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config" | adddate >> wildfly.install.log	
+echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config | adddate >> wildfly.install.log 2>&1	
+echo "systemctl restart sshd" | adddate >> wildfly.install.log	
+systemctl restart sshd | adddate >> wildfly.install.log 2>&1
 
 echo "Sample app deploy..." | adddate >> wildfly.install.log
 echo "wget $fileUrl" | adddate >> wildfly.install.log
