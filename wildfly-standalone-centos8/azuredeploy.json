@@ -33,6 +33,7 @@
     },
     "wildflyPassword": {
       "type": "securestring",
+      "minLength": 12,
       "metadata": {
         "description": "Password for WildFly Manager"
       }
@@ -339,8 +340,10 @@
         "autoUpgradeMinorVersion": true,
         "settings": {
           "fileUris": [
-            "[concat(parameters('_artifactsLocation'), variables('scriptFolder'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]"
-          ],
+            "[uri(parameters('_artifactsLocation'), concat('scripts/wildfly-setup.sh', parameters('_artifactsLocationSasToken')))]"
+          ]
+        },
+        "protectedSettings": {
           "commandToExecute": "[concat('sh wildfly-setup.sh',' ',variables('scriptArgs'),' ',parameters('wildflyUserName'),' ',variables('singlequote'),parameters('wildflyPassword'),variables('singlequote'))]"
         }
       }
